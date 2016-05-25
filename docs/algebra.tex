@@ -71,10 +71,30 @@ Construct the vector field $\vec{u}(x,y,z)$ where $\vec{u} = (\rho, \rho v_x, \r
         - \frac{u_2}{u_1}\left(\pd{u_2}{x} + \pd{u_3}{y} + \pd{u_4}{z}\right)\\[10pt]
         - \frac{u_3}{u_1}\left(\pd{u_2}{x} + \pd{u_3}{y} + \pd{u_4}{z}\right)\\[10pt]
         - \frac{u_4}{u_1}\left(\pd{u_2}{x} + \pd{u_3}{y} + \pd{u_4}{z}\right)\\[10pt]
+        0\\
+        0\\
+        0\\
+        0
     \end{pmatrix}
 \end{align}
 
-Note that all derivatives are given by the expression $\pd{f_{x,y,z}}{x} = \frac{f_{x+1,y,z} - f_{x-1,y,z}}{2\;dx}$, which is the slope of the extrapolated quadratic fit between points $(x+1,y,z),(x,y,z),(x-1,y,z)$.
+Note that all derivatives are given by the expression $\pd{f_{x,y,z}}{x} = \frac{f_{x+1,y,z} - f_{x-1,y,z}}{2\;dx}$, which is the slope of the extrapolated quadratic fit between points $(x+1,y,z),(x,y,z),(x-1,y,z)$, unless we are at a boundary, in which case we simply take $\frac{f_{x+1,y,z} - f_{x,y,z}}{dx}$ for instance.
+
+Lastly, let's compute the components for $P^*, EPmDV$ and obatin
+\begin{align}
+    u_9 = P^* &= (\gamma - 1)\left( u_8 - \frac{u_2^2 + u_3^2 + u_4^2}{2u_1} + \frac{u_5^2 + u_6^2 + u_7^2}{2} \right)\\
+    \begin{pmatrix} u_{10}\\u_{11} \\ u_{12}
+    \end{pmatrix} = EPmDV &=
+    \begin{pmatrix} 
+        -(u_8 + u_9)u_2 + u_5(u_2u_5 + u_3u_6 + u_4u_7)\\
+        -(u_8 + u_9)u_3 + u_6(u_2u_5 + u_3u_6 + u_4u_7)\\
+        -(u_8 + u_9)u_4 + u_7(u_2u_5 + u_3u_6 + u_4u_7)
+    \end{pmatrix}
+\end{align}
+
+\subsection{Divergence-free}
+
+The condition $\vec{\nabla} \cdot \vec{B} = 0$ must always be maintained for physical results. While this is theoretically enforced in the continuous limit since the divergence of a curl is zero and $\pd{\vec{B}}{t} \propto \vec{\nabla} \times (\dots)$, this is not enforced to machine precision upon discretization, and manual treatment should be effected. We do not in this present iteration of the code.
 
 \section{Numerics Considerations}
 
