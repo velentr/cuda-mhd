@@ -1,0 +1,108 @@
+    \documentclass[10pt]{article}
+    \usepackage{fancyhdr, amsmath, amsthm, amssymb, mathtools, lastpage, hyperref, enumerate, graphicx, setspace, wasysym, upgreek, listings}
+    \usepackage[margin=0.8in]{geometry}
+    \newcommand{\scinot}[2]{#1\times10^{#2}}
+    \newcommand{\bra}[1]{\left<#1\right|}
+    \newcommand{\ket}[1]{\left|#1\right>}
+    \newcommand{\dotp}[2]{\left<#1\,\middle|\,#2\right>}
+    \newcommand{\rd}[2]{\frac{\mathrm{d}#1}{\mathrm{d}#2}}
+    \newcommand{\pd}[2]{\frac{\partial#1}{\partial#2}}
+    \newcommand{\rtd}[2]{\frac{\mathrm{d}^2#1}{\mathrm{d}#2^2}}
+    \newcommand{\ptd}[2]{\frac{\partial^2 #1}{\partial#2^2}}
+    \newcommand{\norm}[1]{\left|\left|#1\right|\right|}
+    \newcommand{\abs}[1]{\left|#1\right|}
+    \newcommand{\pvec}[1]{\vec{#1}^{\,\prime}}
+    \newcommand{\tensor}[1]{\overleftrightarrow{#1}}
+    \let\Re\undefined
+    \let\Im\undefined
+    \newcommand{\ang}[0]{\text{\AA}}
+    \newcommand{\mum}[0]{\upmu \mathrm{m}}
+    \DeclareMathOperator{\Re}{Re}
+    \DeclareMathOperator{\Im}{Im}
+    \DeclareMathOperator{\Log}{Log}
+    \DeclareMathOperator{\Arg}{Arg}
+    \DeclareMathOperator{\Tr}{Tr}
+    \DeclareMathOperator{\E}{E}
+    \DeclareMathOperator{\Var}{Var}
+    \DeclareMathOperator*{\argmin}{argmin}
+    \DeclareMathOperator*{\argmax}{argmax}
+    \DeclareMathOperator{\sgn}{sgn}
+    \newcommand{\expvalue}[1]{\left<#1\right>}
+    \usepackage[labelfont=bf, font=scriptsize]{caption}\usepackage{tikz}
+    \usepackage[font=scriptsize]{subcaption}
+    \everymath{\displaystyle}
+    \lstset{basicstyle=\ttfamily\footnotesize,frame=single,numbers=left}
+
+\tikzstyle{circ} = [draw, circle, fill=white, node distance=3cm, minimum height=2em]
+
+\begin{document}
+
+\pagestyle{fancy}
+\rhead{Yubo Su --- Numerics Notes}
+\cfoot{\thepage/\pageref{LastPage}}
+
+\section{Expanding the conservation laws}
+
+The conservation laws are given below in terms of $\mu = 1$. For numerical convenience, place a dimensionless $\mu$ in front of each $\vec{B}$ appearance and let $\mu = 0$ be plain compressible hydrodynamics.
+\begin{align}
+    \pd{\rho}{t} &= -\vec{\nabla} \cdot (\rho \vec{v}) \nonumber\\
+    \pd{(\rho \vec{v})}{t} &= -\vec{\nabla} \cdot (\rho \vec{v} \vec{v} - \vec{B} \vec{B}) - \vec{\nabla}P^* \nonumber\\
+    \pd{\vec{B}}{t} &= \vec{\nabla} \times (\vec{v} \times \vec{B}) \nonumber\\
+    \pd{E}{t} &= -\vec{\nabla} \cdot \left( (E + P^*)\vec{v} - \vec{B}(\vec{B} \cdot \vec{v}) \right)
+\end{align}
+where $P^* = (\gamma - 1)\left( E - \rho \frac{v^2}{2} - \frac{B^2}{2} \right) + \frac{B^2}{2}$. Note that $\vec{B}\vec{B}$ is a dyadic tensor $\mathbf{B} = \vec{B}\vec{B}$ such that $\mathbf{B}_{ij} = B_iB_j$. Then the divergence $\vec{\nabla} \cdot \mathbf{B} = \partial^iB_iB_j\hat{e}_j = B_i\partial_iB_j \hat{e}_j = \left( \vec{B} \cdot \vec{\nabla} \right)\vec{B}$. On the other hand, $\vec{\nabla} \cdot \rho\vec{v}\vec{v} = \left( \vec{\nabla} \cdot \rho\vec{v} \right)\vec{v} + (\vec{v} \cdot \vec{\nabla})\rho\vec{v}$ where in general we allow $\vec{\nabla} \cdot \rho \vec{v} \neq 0$. 
+
+Some intermediate steps: $\vec{\nabla} \cdot (\rho \vec{v} \vec{v}) = \frac{\rho \vec{v}}{\rho} \cdot \vec{\nabla}(\rho \vec{v})$. Additionally, $\vec{\nabla} \times (\vec{v} \times \vec{B}) = (\vec{B} \cdot \vec{\nabla})\vec{v} - (\vec{v} \cdot \vec{\nabla})\vec{B} - \vec{B}(\vec{\nabla} \cdot \vec{v})$ since only $\vec{\nabla} \cdot \vec{B} = 0$.
+
+Construct the vector field $\vec{u}(x,y,z)$ where $\vec{u} = (\rho, \rho v_x, \rho v_y, \rho v_z, B_x, B_y, B_z, E)$ and assume we have point-by-point cached values of $-(E + P^*)\vec{v} + \vec{B}(\vec{B} \cdot \vec{v})  = EPmDV_i$ (along with $P^*$, four values), then we can represent these evolution equations as (two lines b/c too damn long)
+\begin{align}
+    \pd{\vec{u}}{t} = f(\vec{u}) {}=& \begin{pmatrix} 
+        -\pd{u_2}{x} - \pd{u_3}{y} - \pd{u_4}{z}\\[10pt]
+        -\frac{u_2}{u_1}\pd{u_2}{x}-\frac{u_3}{u_1}\pd{u_2}{y}-\frac{u_4}{u_1}\pd{u_2}{z} + u_5\pd{u_2}{x} + u_6\pd{u_2}{y} + u_7\pd{u_2}{z} - \pd{P^*}{x}\\[10pt]
+        -\frac{u_2}{u_1}\pd{u_3}{x}-\frac{u_3}{u_1}\pd{u_3}{y}-\frac{u_4}{u_1}\pd{u_3}{z} + u_5\pd{u_3}{x} + u_6\pd{u_3}{y} + u_7\pd{u_3}{z} - \pd{P^*}{y}\\[10pt]
+        -\frac{u_2}{u_1}\pd{u_4}{x}-\frac{u_4}{u_1}\pd{u_2}{y}-\frac{u_4}{u_1}\pd{u_4}{z} + u_5\pd{u_4}{x} + u_6\pd{u_4}{y} + u_7\pd{u_4}{z} - \pd{P^*}{z}\\[10pt]
+        \frac{u_5\pd{u_2}{x} + u_6\pd{u_2}{y} + u_7\pd{u_2}{z} - u_2\pd{u_5}{x} - u_3\pd{u_5}{y} - u_4\pd{u_5}{z} - u_5\left(\pd{u_2}{x} + \pd{u_3}{y} + \pd{u_4}{z}\right)}{u_1}\\[10pt]
+        \frac{u_5\pd{u_3}{x} + u_6\pd{u_3}{y} + u_7\pd{u_3}{z} - u_2\pd{u_6}{x} - u_3\pd{u_6}{y} - u_4\pd{u_6}{z} - u_6\left(\pd{u_2}{x} + \pd{u_3}{y} + \pd{u_4}{z}\right)}{u_1}\\[10pt]
+        \frac{u_5\pd{u_4}{x} + u_6\pd{u_4}{y} + u_7\pd{u_4}{z} - u_2\pd{u_7}{x} - u_3\pd{u_7}{y} - u_4\pd{u_7}{z} - u_7\left(\pd{u_2}{x} + \pd{u_3}{y} + \pd{u_4}{z}\right)}{u_1}\\[10pt]
+        \pd{EPmDV_1}{x} + \pd{EPmDV_2}{y} + \pd{EPmDV_3}{z}
+    \end{pmatrix} \nonumber\\
+    &+ \begin{pmatrix}
+        0\\
+        - \frac{u_2}{u_1}\left(\pd{u_2}{x} + \pd{u_3}{y} + \pd{u_4}{z}\right)\\[10pt]
+        - \frac{u_3}{u_1}\left(\pd{u_2}{x} + \pd{u_3}{y} + \pd{u_4}{z}\right)\\[10pt]
+        - \frac{u_4}{u_1}\left(\pd{u_2}{x} + \pd{u_3}{y} + \pd{u_4}{z}\right)\\[10pt]
+        0\\
+        0\\
+        0\\
+        0
+    \end{pmatrix}
+\end{align}
+
+Note that all derivatives are given by the expression $\pd{f_{x,y,z}}{x} = \frac{f_{x+1,y,z} - f_{x-1,y,z}}{2\;dx}$, which is the slope of the extrapolated quadratic fit between points $(x+1,y,z),(x,y,z),(x-1,y,z)$, unless we are at a boundary, in which case we simply take $\frac{f_{x+1,y,z} - f_{x,y,z}}{dx}$ for instance.
+
+Lastly, let's compute the components for $P^*, EPmDV$ and obatin
+\begin{align}
+    u_9 = P^* &= (\gamma - 1)\left( u_8 - \frac{u_2^2 + u_3^2 + u_4^2}{2u_1} + \frac{u_5^2 + u_6^2 + u_7^2}{2} \right)\\
+    \begin{pmatrix} u_{10}\\u_{11} \\ u_{12}
+    \end{pmatrix} = EPmDV &=
+    \begin{pmatrix} 
+        -(u_8 + u_9)u_2 + u_5(u_2u_5 + u_3u_6 + u_4u_7)\\
+        -(u_8 + u_9)u_3 + u_6(u_2u_5 + u_3u_6 + u_4u_7)\\
+        -(u_8 + u_9)u_4 + u_7(u_2u_5 + u_3u_6 + u_4u_7)
+    \end{pmatrix}
+\end{align}
+
+\subsection{Divergence-free}
+
+The condition $\vec{\nabla} \cdot \vec{B} = 0$ must always be maintained for physical results. While this is theoretically enforced in the continuous limit since the divergence of a curl is zero and $\pd{\vec{B}}{t} \propto \vec{\nabla} \times (\dots)$, this is not enforced to machine precision upon discretization, and manual treatment should be effected. We do not in this present iteration of the code.
+
+\section{Numerics Considerations}
+
+\begin{itemize}
+    \item Runge-Kutta takes the entire $12L^3$ size $\vec{u}$ (including the $EPmDV_i, P^*$ variables) and updates it at once by computing a $d\vec{u}$. This requires three temporary arrays before obtaining $d\vec{u}$. Since this is evolving the entire array forward at each timestep, we require $4N$ operations to move forward a timestep, the same as if we run R-K at each point individually (fixing all other points on the grid constant) just requiring more space. However, the upshot is that we require storing updates to the whole grid to compute $d\vec{u}$ accurately using R-K, while using something like Euler we don't need temporary values and \emph{can} ignore updates to the grid with no accuracy penalty.
+
+        GPU optimizations must be considered. Since GPU-side storage is limited and computing all these temporary arrays seems slow, it would seem that some local approximation to the R-K at each pixel would be preferable. While this loses some accuracy and actually requires at least as many operations, it may be preferred for its decreased memory footprint.
+\end{itemize}
+
+\end{document}
+
