@@ -27,12 +27,12 @@
 void dydx_exp(double* yn, double* dy, int leny)
 {
     /* leny = NUM_COMPS * n^3, side length */
-    int n = cbrt(leny / NUM_COMPS);
+    int n = cbrt(((double)leny) / NUM_COMPS);
     int i, j, k;
     /* store derivative indicies, left/right (store handling of boundary cases)
      * */
     int dxleft, dxright, dyleft, dyright, dzleft, dzright;
-    float div_v; /* useul for precomputation */
+    double div_v; /* useul for precomputation */
 
     /* change each point */
     for(i = 0; i < n; i++)
@@ -279,9 +279,9 @@ void dydx_exp(double* yn, double* dy, int leny)
 void update(double* yn, int leny)
 {
     /* Update computations of P^*, EPmDV */
-    int n = cbrt(leny / NUM_COMPS);
+    int n = cbrt(((double)leny) / NUM_COMPS);
     int i, j, k;
-    float bdotv; /* useul for precomputation */
+    double bdotv; /* useul for precomputation */
     for(i = 0; i < n; i++)
     {
         for(j = 0; j < n; j++)
@@ -326,7 +326,7 @@ int main(int argc, const char *argv[])
     int i, j, k, l;
 
     /* run parameters parameters */
-    n = 30; /* side length of cube in # grids */
+    n = 20; /* side length of cube in # grids */
     leny = NUM_COMPS * n * n * n;
 
     finalT = 0.000001;

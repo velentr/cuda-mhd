@@ -30,7 +30,7 @@ int main(int argc, const char *argv[])
     nblks  = atoi(argv[2]);
 
     /* run parameters parameters */
-    n = 30; /* side length of cube in # grids */
+    n = 20; /* side length of cube in # grids */
     leny = NUM_COMPS * n * n * n;
 
     finalT = 0.000001;
