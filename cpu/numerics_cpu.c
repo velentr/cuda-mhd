@@ -9,9 +9,9 @@ void step(void (*f)(double*, double*, int), double dt, double* yn,
         double* ynew, double* dy, int leny, double* scratch, double* scratch2)
 /* Given some dy/dt = f(y), compute the dy for a given yn and store into yn +
  * dy into ynew. Uses Runge-Kutta:
- * k1 = f(y), k2 = f(y + k1 * dt/2), k3 = f(y + k2 * dt/2), 
+ * k1 = f(y), k2 = f(y + k1 * dt/2), k3 = f(y + k2 * dt/2),
  *      k4 = f(y + k3 * dt), ynew = yn + (k1 + 2k2 + 2k3 + k4)/6 * dt
- * 
+ *
  * 2 scratch vectors required to not nuke in case ynew = yn (overwrite)
  *
  * Input:
@@ -36,28 +36,28 @@ void step(void (*f)(double*, double*, int), double dt, double* yn,
 
     (*f)(yn, dy, leny); /* compute k1 into dy */
     /* scratch = yn + k1 * dt/2 */
-    for (i = 0; i < leny; i++) 
+    for (i = 0; i < leny; i++)
     {
         scratch[i] = yn[i] + dy[i] * dt / 2; /* y + k1 * dt/2 */
         scratch2[i] = dy[i] / 6; /* k1 / 6 */
     }
 
     (*f)(scratch, dy, leny); /* compute k2 into dy */
-    for (i = 0; i < leny; i++) 
+    for (i = 0; i < leny; i++)
     {
         scratch[i] = yn[i] + dy[i] * dt / 2; /* y + k2 * dt/2 */
         scratch2[i] += dy[i] / 3; /* (k1 + 2k2) / 6 */
     }
 
     (*f)(scratch, dy, leny); /* compute k3 into dy */
-    for (i = 0; i < leny; i++) 
+    for (i = 0; i < leny; i++)
     {
         scratch[i] = yn[i] + dy[i] * dt; /* y + k3 * dt */
         scratch2[i] += dy[i] / 3; /* (k1 + 2k2 + 2k3) / 6 */
     }
 
     (*f)(scratch, dy, leny); /* compute k4 into dy */
-    for (i = 0; i < leny; i++) 
+    for (i = 0; i < leny; i++)
     {
         /* dt * (k1 + 2k2 + 2k3 + k4) / 6 + yn */
         ynew[i] = dt * (scratch2[i] + dy[i] / 6) + yn[i];
@@ -98,16 +98,16 @@ double* solve(void (*f)(double*, double*, int),
     memcpy(ret, y0, leny * sizeof(double));
 
     /* at each step, get ynew into ret, else edit in place */
-    for (i = 0; i < nsteps / save_skip; i++) 
+    for (i = 0; i < nsteps / save_skip; i++)
     {
         source = ret + i * leny;
         dest = source + leny; /* save into here */
 
-        for (j = 0; j < save_skip; j++) 
+        for (j = 0; j < save_skip; j++)
         {
             step(f, dt, source, dest, dy, leny,
                     scratch, scratch2);
-            
+
             /* run only if passed non-null */
             if(g != NULL)
             {
