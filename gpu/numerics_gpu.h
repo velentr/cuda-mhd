@@ -28,28 +28,7 @@
 #define DL 1000
 #define GAMMA 1.4
 
-void step(void (*f)(double*, double*, int), double dt, double* yn,
-        double* ynew, double* dy, int leny, double* scratch, double* scratch2);
-/* Given some dy/dt = f(y), compute the dy for a given yn and store into yn +
- * dy into ynew. Uses Runge-Kutta:
- * k1 = f(y), k2 = f(y + k1 * dt/2), k3 = f(y + k2 * dt/2),
- *      k4 = f(y + k3 * dt), ynew = yn + (k1 + 2k2 + 2k3 + k4)/6 * dt
- *
- * 2 scratch vectors required to not nuke in case ynew = yn (overwrite)
- *
- * Input:
- *  void (*f)           : computes dy/dt = f(y), stores into second double*
- *  double dt            : timestep dt
- *  double* yn           : current y
- *  double* ynew         : new y
- *  double* dy           : get return from (*f) (malloc in caller)
- *  int leny            : length of y vector
- *  double* scratch[2]   : scratch vector, simply to avoid re-mallocing,
- *                          also leny
- */
-
-double *solve(void (*f)(double*, double*, int),
-        double* y0, double dt, int nsteps, int leny, int save_skip,
+double *solve(double *y0, double dt, int nsteps, int leny, int save_skip,
         size_t nblk, size_t thr);
 /* Given some initial y(t = 0) and dy/dt = f(y) (autonomous ODE), computes
  * y(nsteps * dt) by iterating y_n -> y_{n+1} via step. y assumed in

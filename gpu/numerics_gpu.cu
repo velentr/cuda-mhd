@@ -8,6 +8,258 @@
 
 #include "numerics_gpu.h"
 
+__device__ void dydx_exp(double* yn, double* dy, int leny)
+{
+    /* leny = NUM_COMPS * n^3, side length */
+    int n = (int)cbrt((double) (leny / NUM_COMPS));
+    int i, j, k;
+    /* store derivative indicies, left/right (store handling of boundary cases)
+     * */
+    int dxleft, dxright, dyleft, dyright, dzleft, dzright;
+    float div_v; /* useul for precomputation */
+
+    /* change each point */
+    for(i = 0; i < n; i++)
+    {
+        /* compute x derivative indicies */
+        if (i == 0)
+        {
+            dxleft = i;
+        }
+        else
+        {
+            dxleft = i - 1;
+        }
+        if (i == n - 1)
+        {
+            dxright = i;
+        }
+        else
+        {
+            dxright = i + 1;
+        }
+        for(j = 0; j < n; j++)
+        {
+            /* y derivative indicies */
+            if (j == 0)
+            {
+                dyleft = j;
+            }
+            else
+            {
+                dyleft = j - 1;
+            }
+            if (j == n - 1)
+            {
+                dyright = j;
+            }
+            else
+            {
+                dyright = j + 1;
+            }
+            for(k = 0; k < n; k++)
+            {
+                /* y derivative indicies */
+                if (k == 0)
+                {
+                    dzleft = k;
+                }
+                else
+                {
+                    dzleft = k - 1;
+                }
+                if (k == n - 1)
+                {
+                    dzright = k;
+                }
+                else
+                {
+                    dzright = k + 1;
+                }
+
+                /* update terms */
+                div_v =
+                    (yn[U2(n, dxright, j, k)] -
+                        yn[U2(n, dxleft, j, k)]) / ((dxright - dxleft) * DL) +
+                    (yn[U3(n, i, dyright, k)] -
+                        yn[U3(n, i, dyleft, k)]) / ((dyright - dyleft) * DL) +
+                    (yn[U4(n, i, j, dzright)] -
+                        yn[U4(n, i, j, dzleft)]) / ((dzright - dzleft) * DL);
+
+                dy[U1(n, i, j, k)] = -div_v;
+
+                dy[U2(n, i, j, k)] = -
+                    (yn[U2(n, i, j, k)] / yn[U1(n, i, j, k)]) *
+                        ((yn[U2(n, dxright, j, k)] -
+                        yn[U2(n, dxleft, j, k)]) / ((dxright - dxleft) * DL)) -
+                    (yn[U3(n, i, j, k)] / yn[U1(n, i, j, k)]) *
+                        ((yn[U2(n, i, dyright, k)] -
+                        yn[U2(n, i, dyleft, k)]) / ((dyright - dyleft) * DL)) -
+                    (yn[U4(n, i, j, k)] / yn[U1(n, i, j, k)]) *
+                        ((yn[U2(n, i, j, dzright)] -
+                        yn[U2(n, i, j, dzleft)]) / ((dzright - dzleft) * DL)) +
+
+                    yn[U5(n, i, j, k)] *
+                        ((yn[U2(n, dxright, j, k)] -
+                        yn[U2(n, dxleft, j, k)]) / ((dxright - dxleft) * DL)) +
+                    yn[U6(n, i, j, k)] *
+                        ((yn[U2(n, i, dyright, k)] -
+                        yn[U2(n, i, dyleft, k)]) / ((dyright - dyleft) * DL)) +
+                    yn[U7(n, i, j, k)] *
+                        ((yn[U2(n, i, j, dzright)] -
+                        yn[U2(n, i, j, dzleft)]) / ((dzright - dzleft) * DL)) -
+
+                    ((yn[U8(n, dxright, j, k)] -
+                        yn[U8(n, dxleft, j, k)]) / ((dxright - dxleft) * DL)) -
+
+                    (yn[U2(n, i, j, k)] / yn[U1(n, i, j, k)]) * div_v -
+
+                    (yn[U9(n, dxright, j, k)] -
+                        yn[U9(n, dxleft, j, k)]) / ((dxright - dxleft) * DL);
+
+                dy[U3(n, i, j, k)] = -
+                    (yn[U2(n, i, j, k)] / yn[U1(n, i, j, k)]) *
+                        ((yn[U3(n, dxright, j, k)] -
+                        yn[U3(n, dxleft, j, k)]) / ((dxright - dxleft) * DL)) -
+                    (yn[U3(n, i, j, k)] / yn[U1(n, i, j, k)]) *
+                        ((yn[U3(n, i, dyright, k)] -
+                        yn[U3(n, i, dyleft, k)]) / ((dyright - dyleft) * DL)) -
+                    (yn[U4(n, i, j, k)] / yn[U1(n, i, j, k)]) *
+                        ((yn[U3(n, i, j, dzright)] -
+                        yn[U3(n, i, j, dzleft)]) / ((dzright - dzleft) * DL)) +
+
+                    yn[U5(n, i, j, k)] *
+                        ((yn[U3(n, dxright, j, k)] -
+                        yn[U3(n, dxleft, j, k)]) / ((dxright - dxleft) * DL)) +
+                    yn[U6(n, i, j, k)] *
+                        ((yn[U3(n, i, dyright, k)] -
+                        yn[U3(n, i, dyleft, k)]) / ((dyright - dyleft) * DL)) +
+                    yn[U7(n, i, j, k)] *
+                        ((yn[U3(n, i, j, dzright)] -
+                        yn[U3(n, i, j, dzleft)]) / ((dzright - dzleft) * DL)) -
+
+                    ((yn[U8(n, i, dyright, k)] -
+                        yn[U8(n, i, dyleft, k)]) / ((dyright - dyleft) * DL)) -
+
+                    (yn[U3(n, i, j, k)] / yn[U1(n, i, j, k)]) * div_v -
+
+                    (yn[U9(n, i, dyright, k)] -
+                        yn[U9(n, i, dyleft, k)]) / ((dyright - dyleft) * DL);
+
+                dy[U4(n, i, j, k)] = -
+                    (yn[U2(n, i, j, k)] / yn[U1(n, i, j, k)]) *
+                        ((yn[U4(n, dxright, j, k)] -
+                        yn[U4(n, dxleft, j, k)]) / ((dxright - dxleft) * DL)) -
+                    (yn[U3(n, i, j, k)] / yn[U1(n, i, j, k)]) *
+                        ((yn[U4(n, i, dyright, k)] -
+                        yn[U4(n, i, dyleft, k)]) / ((dyright - dyleft) * DL)) -
+                    (yn[U4(n, i, j, k)] / yn[U1(n, i, j, k)]) *
+                        ((yn[U4(n, i, j, dzright)] -
+                        yn[U4(n, i, j, dzleft)]) / ((dzright - dzleft) * DL)) +
+
+                    yn[U5(n, i, j, k)] *
+                        ((yn[U4(n, dxright, j, k)] -
+                        yn[U4(n, dxleft, j, k)]) / ((dxright - dxleft) * DL)) +
+                    yn[U6(n, i, j, k)] *
+                        ((yn[U4(n, i, dyright, k)] -
+                        yn[U4(n, i, dyleft, k)]) / ((dyright - dyleft) * DL)) +
+                    yn[U7(n, i, j, k)] *
+                        ((yn[U4(n, i, j, dzright)] -
+                        yn[U4(n, i, j, dzleft)]) / ((dzright - dzleft) * DL)) -
+
+                    ((yn[U8(n, i, j, dzright)] -
+                        yn[U8(n, i, j, dzleft)]) / ((dzright - dzleft) * DL)) -
+
+                    (yn[U4(n, i, j, k)] / yn[U1(n, i, j, k)]) * div_v -
+
+                    (yn[U9(n, i, j, dzright)] -
+                        yn[U9(n, i, j, dzleft)]) / ((dzright - dzleft) * DL);
+
+                dy[U5(n, i, j, k)] = (
+                    yn[U5(n, i, j, k)] *
+                        ((yn[U2(n, dxright, j, k)] -
+                        yn[U2(n, dxleft, j, k)]) / ((dxright - dxleft) * DL)) +
+                    yn[U6(n, i, j, k)] *
+                        ((yn[U2(n, i, dyright, k)] -
+                        yn[U2(n, i, dyleft, k)]) / ((dyright - dyleft) * DL)) +
+                    yn[U7(n, i, j, k)] *
+                        ((yn[U2(n, i, j, dzright)] -
+                        yn[U2(n, i, j, dzleft)]) / ((dzright - dzleft) * DL)) -
+
+                    yn[U2(n, i, j, k)] *
+                        ((yn[U5(n, dxright, j, k)] -
+                        yn[U5(n, dxleft, j, k)]) / ((dxright - dxleft) * DL)) -
+                    yn[U3(n, i, j, k)] *
+                        ((yn[U5(n, i, dyright, k)] -
+                        yn[U5(n, i, dyleft, k)]) / ((dyright - dyleft) * DL)) -
+                    yn[U4(n, i, j, k)] *
+                        ((yn[U5(n, i, j, dzright)] -
+                        yn[U5(n, i, j, dzleft)]) / ((dzright - dzleft) * DL)) -
+
+                    yn[U5(n, i, j, k)] * div_v) / yn[U1(n, i, j, k)];
+
+                dy[U6(n, i, j, k)] = (
+                    yn[U5(n, i, j, k)] *
+                        ((yn[U3(n, dxright, j, k)] -
+                        yn[U3(n, dxleft, j, k)]) / ((dxright - dxleft) * DL)) +
+                    yn[U6(n, i, j, k)] *
+                        ((yn[U3(n, i, dyright, k)] -
+                        yn[U3(n, i, dyleft, k)]) / ((dyright - dyleft) * DL)) +
+                    yn[U7(n, i, j, k)] *
+                        ((yn[U3(n, i, j, dzright)] -
+                        yn[U3(n, i, j, dzleft)]) / ((dzright - dzleft) * DL)) -
+
+                    yn[U2(n, i, j, k)] *
+                        ((yn[U6(n, dxright, j, k)] -
+                        yn[U6(n, dxleft, j, k)]) / ((dxright - dxleft) * DL)) -
+                    yn[U3(n, i, j, k)] *
+                        ((yn[U6(n, i, dyright, k)] -
+                        yn[U6(n, i, dyleft, k)]) / ((dyright - dyleft) * DL)) -
+                    yn[U4(n, i, j, k)] *
+                        ((yn[U6(n, i, j, dzright)] -
+                        yn[U6(n, i, j, dzleft)]) / ((dzright - dzleft) * DL)) -
+
+                    yn[U6(n, i, j, k)] * div_v) / yn[U1(n, i, j, k)];
+
+                dy[U7(n, i, j, k)] = (
+                    yn[U5(n, i, j, k)] *
+                        ((yn[U4(n, dxright, j, k)] -
+                        yn[U4(n, dxleft, j, k)]) / ((dxright - dxleft) * DL)) +
+                    yn[U6(n, i, j, k)] *
+                        ((yn[U4(n, i, dyright, k)] -
+                        yn[U4(n, i, dyleft, k)]) / ((dyright - dyleft) * DL)) +
+                    yn[U7(n, i, j, k)] *
+                        ((yn[U4(n, i, j, dzright)] -
+                        yn[U4(n, i, j, dzleft)]) / ((dzright - dzleft) * DL)) -
+
+                    yn[U2(n, i, j, k)] *
+                        ((yn[U7(n, dxright, j, k)] -
+                        yn[U7(n, dxleft, j, k)]) / ((dxright - dxleft) * DL)) -
+                    yn[U3(n, i, j, k)] *
+                        ((yn[U7(n, i, dyright, k)] -
+                        yn[U7(n, i, dyleft, k)]) / ((dyright - dyleft) * DL)) -
+                    yn[U4(n, i, j, k)] *
+                        ((yn[U7(n, i, j, dzright)] -
+                        yn[U7(n, i, j, dzleft)]) / ((dzright - dzleft) * DL)) -
+
+                    yn[U7(n, i, j, k)] * div_v) / yn[U1(n, i, j, k)];
+
+                dy[U8(n, i, j, k)] =
+                    (yn[U10(n, dxright, j, k)] -
+                        yn[U10(n, dxleft, j, k)]) / ((dxright - dxleft) * DL) +
+                    (yn[U11(n, i, dyright, k)] -
+                        yn[U11(n, i, dyleft, k)]) / ((dyright - dyleft) * DL) +
+                    (yn[U12(n, i, j, dzright)] -
+                        yn[U12(n, i, j, dzleft)]) / ((dzright - dzleft) * DL);
+
+                dy[U9(n, i, j, k)] = dy[U10(n, i, j, k)] = dy[U11(n, i, j, k)] =
+                    dy[U12(n, i, j, k)] = 0;
+
+            }
+        }
+    }
+}
+
 __global__ void cuda_update(double* yn, int leny)
 {
     /* Update computations of P^*, EPmDV */
@@ -48,9 +300,8 @@ __global__ void cuda_update(double* yn, int leny)
 }
 
 
-__global__ void cuda_step(void (*f)(double *, double *, int), double dt,
-        double *yn, double *ynew, double *dy, int leny, double *scratch,
-        double *scratch2)
+__global__ void cuda_step(double dt, double *yn, double *ynew, double *dy,
+        int leny, double *scratch, double *scratch2)
 /* Given some dy/dt = f(y), compute the dy for a given yn and store into yn +
  * dy into ynew. Uses Runge-Kutta:
  * k1 = f(y), k2 = f(y + k1 * dt/2), k3 = f(y + k2 * dt/2),
@@ -59,11 +310,10 @@ __global__ void cuda_step(void (*f)(double *, double *, int), double dt,
  * 2 scratch vectors required to not nuke in case ynew = yn (overwrite)
  *
  * Input:
- *  void (*f)           : computes dy/dt = f(y), stores into second double*
  *  double dt            : timestep dt
  *  double* yn           : current y
  *  double* ynew         : new y
- *  double* dy           : get return from (*f) (malloc in caller)
+ *  double* dy           : get return from dydx (malloc in caller)
  *  int leny            : length of y vector
  *  double* scratch[2]   : scratch vector, simply to avoid re-mallocing,
  *                          also leny
@@ -78,7 +328,7 @@ __global__ void cuda_step(void (*f)(double *, double *, int), double dt,
      * then copy correct value into ynew */
     int i;
 
-    (*f)(yn, dy, leny); /* compute k1 into dy */
+    dydx_exp(yn, dy, leny); /* compute k1 into dy */
     /* scratch = yn + k1 * dt/2 */
     for (i = 0; i < leny; i++)
     {
@@ -86,21 +336,21 @@ __global__ void cuda_step(void (*f)(double *, double *, int), double dt,
         scratch2[i] = dy[i] / 6; /* k1 / 6 */
     }
 
-    (*f)(scratch, dy, leny); /* compute k2 into dy */
+    dydx_exp(scratch, dy, leny); /* compute k2 into dy */
     for (i = 0; i < leny; i++)
     {
         scratch[i] = yn[i] + dy[i] * dt / 2; /* y + k2 * dt/2 */
         scratch2[i] += dy[i] / 3; /* (k1 + 2k2) / 6 */
     }
 
-    (*f)(scratch, dy, leny); /* compute k3 into dy */
+    dydx_exp(scratch, dy, leny); /* compute k3 into dy */
     for (i = 0; i < leny; i++)
     {
         scratch[i] = yn[i] + dy[i] * dt; /* y + k3 * dt */
         scratch2[i] += dy[i] / 3; /* (k1 + 2k2 + 2k3) / 6 */
     }
 
-    (*f)(scratch, dy, leny); /* compute k4 into dy */
+    dydx_exp(scratch, dy, leny); /* compute k4 into dy */
     for (i = 0; i < leny; i++)
     {
         /* dt * (k1 + 2k2 + 2k3 + k4) / 6 + yn */
@@ -108,15 +358,13 @@ __global__ void cuda_step(void (*f)(double *, double *, int), double dt,
     }
 }
 
-double* solve(void (*f)(double*, double*, int),
-        double* y0, double dt, int nsteps, int leny, int save_skip,
+double *solve(double *y0, double dt, int nsteps, int leny, int save_skip,
         size_t nblk, size_t thr)
 /* Given some initial y(t = 0) and dy/dt = f(y) (autonomous ODE), computes
  * y(nsteps * dt) by iterating y_n -> y_{n+1} via step. y assumed in
  * generality to be a vector
  *
  * Input:
- *  void (*f)           : computes dy/dt = f(y), stores into second double*
  *  double* init         : y(t=0)
  *  double dt            : dt timestep
  *  int nsteps          : number of timesteps to evolve
@@ -161,7 +409,7 @@ double* solve(void (*f)(double*, double*, int),
         for (j = 0; j < save_skip; j++)
         {
             /* Execute a single step in the simulation. */
-            cuda_step<<<nblk, thr>>>(f, dt, source, dest, dy, leny, scratch,
+            cuda_step<<<nblk, thr>>>(dt, source, dest, dy, leny, scratch,
                     scratch2);
 
             /* Update the dataset. */
